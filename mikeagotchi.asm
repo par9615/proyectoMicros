@@ -25,10 +25,19 @@ ALT EQU P3.4
 /*VARIABLES*/
 AAUX EQU 20H
 CUENTA200 EQU 21H
+CUENTA10  EQU 22H	; VIDA
+CUENTA12  EQU 23H	; COMIDA
+CUENTA17  EQU 24H	; SUENO
+
+/*VARIABLES DE MIKE*/
+VIDA  EQU 25H
+COMIDA  EQU 26H
+SUENO EQU 27H
 
 /*VARIABLES BIT*/
 WAIT50 EQU 70H
-
+DORMIDO EQU 71H
+MUERTO EQU 72H
 
 /*DIRECCIONES TIMER 2*/
 T2CON EQU 00C8H
@@ -38,8 +47,7 @@ TL2 EQU 00CCH
 TH2 EQU 00CDH
 TF2 EQU 00CFH
 TR2 EQU 0CAH
-
-	
+/* ===============================    I N I T    ======================================= */
 INIT:
 	MOV IE, #10100111B
 	MOV IP, #00000010B
@@ -64,72 +72,115 @@ INIT:
 	CLR RS
 	CLR RW
 	
-	
 	ACALL INIT_DISPLAY		
 		
 	SETB TR2
 	
 	JMP $
-
-
-
-
+/* =============================== T I M E R   0 ======================================= */
 TIM0:	
-
 	 JB WAIT50, WAITING50 
 	 
 	 WAITING50: 
 	 
 	 MOV A, CUENTA200	;CARGA EL ACUMULADOR CON LA CUENTA ACTUAL
 	 INC A				
-	 CJNE A, #0C8H, FIN	;VERIFICA SI LA CUENTA YA LLEGO A 200
+	 CJNE A, #0C8H, FIN_TIM0;VERIFICA SI LA CUENTA YA LLEGO A 200
 	 
 	 MOV A, #00H	;SI LA CUENTA ES 200 LA BORRA PARA VOLVER A CONTAR
 	 CLR WAIT50		;LIMPIA LA BANDERA DE CONTEO PARA INDICAR QUE YA TERMINO EL DELAY
 	 
-	 FIN:
+	 FIN_TIM0:
 	 MOV CUENTA200, A ;GUARDA LA CUENTA 
-	  
 		 
 	 RETI
-
+/* =============================== T I M E R   2 ======================================= */
 TIM2:
+	MOV AAUX, A
+	JB MUERTO, FIN_TIM2			; CHECAR SI ESTA MUERTO
+	JB DORMIDO, ISDESCANSADO 	; CHECAR SI ESTA DORMIDO
 	
-
+	ACALL SUMAR10				; SUMAR NUESTROS CONTADORES
+	ACALL SUMAR12
+	ACALL SUMAR17
+/* ------------------------------------------------------------------------------------- */
+	DEC_VIDA: 
+	MOV A, CUENTA10				; CHECAR SI YA SE CONTO A 10
+	CJNE A, #0AH, DEC_COMIDA	; SI NO, PASAR A LO SIGUIENTE
+	
+	MOV A, #00H
+	MOV CUENTA10, A				; RESET DE CUENTA
+	
+	MOV A, VIDA
+	DEC A
+	MOV VIDA, A					; RESTAR VIDA
+	
+	CJNE A, #00H, DEC_COMIDA	; SI LA VIDA NO ES 0, RESTAR COMIDA
+	JMP MORIR					; DE LO CONTRARIO, MORIR
+/* ------------------------------------------------------------------------------------- */
+	DEC_COMIDA:
+	MOV A, CUENTA12			; CHECAR SI YA SE CONTO A 12
+	CJNE A, #0CH, DEC_SUENO	; SI NO, PASAR A LO SIGUIENTE
+	
+	MOV A, #00H
+	MOV CUENTA12, A				; RESET DE CUENTA
+	
+	MOV A, COMIDA
+	DEC A
+	MOV COMIDA, A				; RESTAR COMIDA
+	
+	CJNE A, #00H, DEC_SUENO		; SI LA COMIDA NO ES 0, RESTAR SUENO
+	JMP MORIR					; DE LO CONTRARIO, MORIR
+/* ------------------------------------------------------------------------------------- */	
+	DEC_SUENO:
+	MOV A, CUENTA17			; CHECAR SI YA SE CONTO A 17
+	CJNE A, #11H, FIN_TIM2	; SI NO, TERMINAR
+	
+	MOV A, #00H
+	MOV CUENTA17, A				; RESET DE CUENTA
+	
+	MOV A, SUENO
+	DEC A
+	MOV SUENO, A				; RESTAR SUENO
+	
+	CJNE A, #00H, DEC_SUENO		; SI EL SUENO NO ES 0, SALIR
+	JMP DESMAYARSE				; DE LO CONTRARIO, DORMIR
+/* ------------------------------------------------------------------------------------- */	
+	ISDESCANSADO:
+	ACALL CHECK_DESCANSO
+	JMP FIN_TIM2
+/* ------------------------------------------------------------------------------------- */	
+	DESMAYARSE:
+	ACALL DORMIR
+	JMP FIN_TIM2	
+/* ------------------------------------------------------------------------------------- */
+	MORIR:
+	SETB MUERTO
+/* ------------------------------------------------------------------------------------- */
+	FIN_TIM2:
+	MOV A, AAUX
 	RETI
-
-
+/* ===============================    E X T  1   ======================================= */
 EXT1:
 	MOV AAUX, A	
 	 
 	MOV A, KEY			;TOMA EL NUMERO DEL TECLADO
 	 
-	 
 	FIN_EXT1:
 	MOV A, AAUX
 	RETI
-	 
-
-
-
-
+/* ===============================    E X T  0   ======================================= */	 
 EXT0:	
 	
-	
 	RETI
-	
 
-/*SUBRUTINAS*/
-DELAY_50MS:
-	
-	SETB TR0
-	SETB WAIT50
-	SETB TF0	
-	
-	JB WAIT50, $
-	CLR TR0
-	RET
-
+;*****************************************************************************************
+;																						 *
+;								S U B R U T I N A S										 *
+;																						 *
+;								       DISPLAY										 	 *
+;																						 *
+;*****************************************************************************************
 
 INIT_DISPLAY:
 	MOV DBUS, #38H
@@ -145,7 +196,6 @@ INIT_DISPLAY:
 	ACALL EXECUTE_E	
 	
 	RET
-
 
 EXECUTE_E:
 	CPL E
@@ -167,7 +217,7 @@ BORRAR_PANTALLA:
 	ACALL EXECUTE_E
 	RET
 
-/*SEND_ALL: ;ENVÍA TODOS LOS DATOS DE LA PANTALLA POR SERIAL
+/*SEND_ALL: ;ENVIA TODOS LOS DATOS DE LA PANTALLA POR SERIAL
 
 	SETB TI		;INICIALIZA BANDERA (ESTA LISTO PARA ENVIAR)
 	SETB TR1	;PONE A CONTAR EL TIMER 1
@@ -193,7 +243,86 @@ BORRAR_PANTALLA:
 	SETB TI		;TERMINA DE ENVIAR Y QUEDA EN ESPERA
 	CLR TR1		;TIMER 1 DEJA DE CONTAR
 	RET*/
+
+;*****************************************************************************************
+;																						 *
+;								S U B R U T I N A S										 *
+;																						 *
+;								       TIMERS										 	 *
+;																						 *
+;*****************************************************************************************
+
+DELAY_50MS:
 	
+	SETB TR0
+	SETB WAIT50
+	SETB TF0	
+	
+	JB WAIT50, $
+	CLR TR0
+	RET
+	
+SUMAR10:
+	MOV A, CUENTA10
+	INC A
+	MOV CUENTA10, A
+	RETI
+	
+SUMAR12:
+	MOV A, CUENTA12
+	INC A
+	MOV CUENTA12, A
+	RETI
+
+SUMAR17:
+	MOV A, CUENTA17
+	INC A
+	MOV CUENTA17, A
+	RETI	
+
+;*****************************************************************************************
+;																						 *
+;								S U B R U T I N A S										 *
+;																						 *
+;								       JUEGO										 	 *
+;																						 *
+;*****************************************************************************************
+
+/* ============================== D E S C A N S O ====================================== */
+CHECK_DESCANSO:
+	MOV AAUX, A
+	MOV A, SUENO
+	CJNE A, #64H, DESCANSAR			; CHECAR SI YA DESCANSO TODO (SUENO = 100)
+	CLR DORMIDO						; LO DESPERTAMOS
+	JMP FIN_CHK_DESCANSO
+	
+	DESCANSAR:
+	ACALL SUMAR10
+	CJNE A, #0AH, FIN_CHK_DESCANSO	; CHECAR SI LA CUENTA YA LLEGO A 10 PARA SUMAR CAD .5 SEG EL SUENO
+	
+	MOV A, SUENO					; MOVEMOS SUENO A ACC
+	INC A							; LE SUMAMOS 1
+	MOV SUENO, A					; LO GUARDAMOS
+	
+	MOV A, #00H						; PONEMOS ACC EN 0 PARA GUARDARLO EN CUENTA10
+	MOV CUENTA10, A
+	
+	FIN_CHK_DESCANSO:
+	MOV A, AAUX
+	RETI
+/* ==============================   D O R M I R   ====================================== */
+DORMIR:
+	MOV AAUX, A
+	
+	SETB DORMIDO			; DORMIR
+	MOV A, #00H
+	MOV CUENTA10, A			; RESET DE CUENTAS
+	MOV CUENTA12, A
+	MOV CUENTA17, A
+	
+	MOV A, AAUX
+	RETI
+/* ===============================   D T P T R   ======================================= */
 ORG 1000H
 	
 DB '0'
