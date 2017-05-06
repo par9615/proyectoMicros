@@ -28,6 +28,7 @@ CUENTA200 EQU 21H
 CUENTA10  EQU 22H	; VIDA
 CUENTA12  EQU 23H	; COMIDA
 CUENTA17  EQU 24H	; SUENO
+CUENTA5 EQU 25H		; HELPER
 
 /*VARIABLES DE MIKE*/
 VIDA  EQU 25H
@@ -169,21 +170,37 @@ EXT1:
 	QUIERE_JUGAR:
 	CJNE A, #02H, QUIERE_ALIMENTAR		; SI NO ES ESE # DEL TECLADO, CHECAMOS LOS DEMAS
 	
+	INC_VIDA:
 	MOV A, VIDA
 	CJNE A, #64H, FIN_EXT1				; SI LA VIDA ESTA AL MAXIMO, SALIMOS
 	
 	INC A								; INCREMENTAMOS LA VIDA
 	MOV VIDA, A
+	
+	MOV A, CUENTA5						; INCREMENTAMOS LA CUENTA
+	INC A
+	MOV CUENTA5, A
+	
+	CJNE A, #05H, INC_VIDA				; SI NO HEMOS LLEGADO A 5, VOLVEMOS A SUMAR
+	
 	JMP FIN_EXT1
 /* ------------------------------------------------------------------------------------- */	
 	QUIERE_ALIMENTAR:
 	CJNE A, #01H, QUIERE_ARROPAR		; SI NO ES ESE # DEL TECLADO, CHECAMOS LOS DEMAS
 	
+	INC_COMIDA:
 	MOV A, COMIDA
 	CJNE A, #64H, FIN_EXT1				; SI LA COMIDA ESTA AL MAXIMO, SALIMOS
 	
 	INC A								; INCREMENTAMOS LA COMIDA
 	MOV COMIDA, A
+	
+	MOV A, CUENTA5						; INCREMENTAMOS LA CUENTA
+	INC A
+	MOV CUENTA5, A
+	
+	CJNE A, #05H, INC_COMIDA			; SI NO HEMOS LLEGADO A 5, VOLVEMOS A SUMAR
+	
 	JMP FIN_EXT1
 /* ------------------------------------------------------------------------------------- */	
 	QUIERE_ARROPAR:
@@ -196,6 +213,8 @@ EXT1:
 	JMP FIN_EXT1
 /* ------------------------------------------------------------------------------------- */	
 	FIN_EXT1:
+	MOV A, #00H							; RESETEAMOS CUENTA5
+	MOV CUENTA5, A
 	MOV A, AAUX
 	RETI
 /* ===============================    E X T  0   ======================================= */	 
