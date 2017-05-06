@@ -165,7 +165,36 @@ EXT1:
 	MOV AAUX, A	
 	 
 	MOV A, KEY			;TOMA EL NUMERO DEL TECLADO
-	 
+/* ------------------------------------------------------------------------------------- */
+	QUIERE_JUGAR:
+	CJNE A, #02H, QUIERE_ALIMENTAR		; SI NO ES ESE # DEL TECLADO, CHECAMOS LOS DEMAS
+	
+	MOV A, VIDA
+	CJNE A, #64H, FIN_EXT1				; SI LA VIDA ESTA AL MAXIMO, SALIMOS
+	
+	INC A								; INCREMENTAMOS LA VIDA
+	MOV VIDA, A
+	JMP FIN_EXT1
+/* ------------------------------------------------------------------------------------- */	
+	QUIERE_ALIMENTAR:
+	CJNE A, #01H, QUIERE_ARROPAR		; SI NO ES ESE # DEL TECLADO, CHECAMOS LOS DEMAS
+	
+	MOV A, COMIDA
+	CJNE A, #64H, FIN_EXT1				; SI LA COMIDA ESTA AL MAXIMO, SALIMOS
+	
+	INC A								; INCREMENTAMOS LA COMIDA
+	MOV COMIDA, A
+	JMP FIN_EXT1
+/* ------------------------------------------------------------------------------------- */	
+	QUIERE_ARROPAR:
+	CJNE A, #00H, FIN_EXT1				; SI NO ES ESE # DEL TECLADO, CHECAMOS LOS DEMAS
+	
+	MOV A, SUENO
+	CJNE A, #64H, FIN_EXT1				; SI EL SUENO ESTA AL MAXIMO, SALIMOS
+	
+	ACALL DORMIR						; LO DORMIMOS
+	JMP FIN_EXT1
+/* ------------------------------------------------------------------------------------- */	
 	FIN_EXT1:
 	MOV A, AAUX
 	RETI
