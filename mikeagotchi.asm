@@ -25,9 +25,9 @@ ALT EQU P3.4
 /*VARIABLES*/
 AAUX EQU 20H
 CUENTA200 EQU 21H
-CUENTA10  EQU 22H	; VIDA
-CUENTA12  EQU 23H	; COMIDA
-CUENTA17  EQU 24H	; SUENO
+CUENTA40  EQU 22H	; COMIDA
+CUENTA80  EQU 23H	; CAFE
+CUENTA100  EQU 24H	; AMOR
 CUENTA5 EQU 25H		; HELPER
 
 /*VARIABLES DE MIKE*/ ;MOVI LAS DIRECCIONES UN LUGAR PORQUE VIDA ERA 25H Y ESA YA ESTA
@@ -73,6 +73,7 @@ BOTTOM_PILA3 EQU 5EH
 
 /* ===============================    I N I T    ======================================= */
 INIT:
+	MOV SP, #40H
 	MOV IE, #10100111B
 	MOV IP, #00000010B
 	MOV TCON, #00000101B
@@ -147,91 +148,80 @@ TIM0:
 /* =============================== T I M E R   2 ======================================= */
 TIM2:
 	MOV AAUX, A
-	JB MUERTO, FIN_TIM2			; CHECAR SI ESTA MUERTO
-	JB DORMIDO, ISDESCANSADO 	; CHECAR SI ESTA DORMIDO
+	JB MUERTO, MORIR		; CHECAR SI ESTA MUERTO
+    JB DORMIDO, DORMIR 	; CHECAR SI ESTA DORMIDO
 	
-	ACALL SUMAR10				; SUMAR NUESTROS CONTADORES
-	ACALL SUMAR12
-	ACALL SUMAR17
+	ACALL SUMAR40				; SUMAR NUESTROS CONTADORES
+	ACALL SUMAR80
+	ACALL SUMAR100
 /* ------------------------------------------------------------------------------------- */
-	DEC_VIDA: 
-	MOV A, CUENTA10				; CHECAR SI YA SE CONTO A 10
-	CJNE A, #0AH, DEC_COMIDA	; SI NO, PASAR A LO SIGUIENTE
+	DEC_COMIDA: 
+	MOV A, CUENTA40				; CHECAR SI YA SE CONTO A 10
+	CJNE A, #(40), DEC_CAFE	; SI NO, PASAR A LO SIGUIENTE
 	
 	MOV A, #00H
-	MOV CUENTA10, A				; RESET DE CUENTA
+	MOV CUENTA40, A				; RESET DE CUENTA
+	ACALL ANIMA_OJOS
 	
-	MOV A, VIDA
-	DEC A
-	MOV VIDA, A					; RESTAR VIDA
-	
-	CJNE A, #00H, DEC_COMIDA	; SI LA VIDA NO ES 0, RESTAR COMIDA
-	JMP MORIR					; DE LO CONTRARIO, MORIR
+	ACALL DECREMENTA_PILA1
 /* ------------------------------------------------------------------------------------- */
-	DEC_COMIDA:
-	MOV A, CUENTA12			; CHECAR SI YA SE CONTO A 12
-	CJNE A, #0CH, DEC_SUENO	; SI NO, PASAR A LO SIGUIENTE
+	DEC_CAFE:
+	MOV A, CUENTA80			; CHECAR SI YA SE CONTO A 12
+	CJNE A, #(80), DEC_AMOR	; SI NO, PASAR A LO SIGUIENTE
 	
 	MOV A, #00H
-	MOV CUENTA12, A				; RESET DE CUENTA
+	MOV CUENTA80, A				; RESET DE CUENTA
 	
-	MOV A, COMIDA
-	DEC A
-	MOV COMIDA, A				; RESTAR COMIDA
-	
-	CJNE A, #00H, DEC_SUENO		; SI LA COMIDA NO ES 0, RESTAR SUENO
-	JMP MORIR					; DE LO CONTRARIO, MORIR
+	ACALL DECREMENTA_PILA2		; DE LO CONTRARIO, MORIR
 /* ------------------------------------------------------------------------------------- */	
-	DEC_SUENO:
-	MOV A, CUENTA17			; CHECAR SI YA SE CONTO A 17
-	CJNE A, #11H, FIN_TIM2	; SI NO, TERMINAR
+	DEC_AMOR:
+	MOV A, CUENTA100			; CHECAR SI YA SE CONTO A 17
+	CJNE A, #(100), FIN_TIM2	; SI NO, TERMINAR
 	
 	MOV A, #00H
-	MOV CUENTA17, A				; RESET DE CUENTA
+	MOV CUENTA100, A				; RESET DE CUENTA
 	
-	MOV A, SUENO
-	DEC A
-	MOV SUENO, A				; RESTAR SUENO
+	ACALL DECREMENTA_PILA3			; DE LO CONTRARIO, DORMIR
 	
-	CJNE A, #00H, DEC_SUENO		; SI EL SUENO NO ES 0, SALIR
-	JMP DESMAYARSE				; DE LO CONTRARIO, DORMIR
-/* ------------------------------------------------------------------------------------- */	
-	ISDESCANSADO:
-	ACALL CHECK_DESCANSO
 	JMP FIN_TIM2
 /* ------------------------------------------------------------------------------------- */	
-	DESMAYARSE:
-	ACALL DORMIR
-	JMP FIN_TIM2	
+	
+/* ------------------------------------------------------------------------------------- */	
+	DORMIR:
+	ACALL OJO_DORMIDO
+	ACALL INCREMENTA_PILA2
+	JNB LLENA2, FIN_TIM2
+	CLR DORMIDO
+	JMP FIN_TIM2
 /* ------------------------------------------------------------------------------------- */
 	MORIR:
-	SETB MUERTO
+	ACALL OJO_MUERTO
 /* ------------------------------------------------------------------------------------- */
 	FIN_TIM2:
 	MOV A, AAUX
 	RETI
 /* ===============================    E X T  1   ======================================= */
 EXT1:
-	;JB MUERTO, FIN_EXT1
+	JB MUERTO, FIN_EXT1
 	MOV AAUX, A		 
 	MOV A, KEY			;TOMA EL NUMERO DEL TECLADO
 /* ------------------------------------------------------------------------------------- */
 	ALIMENTAR:
 	CJNE A, #02H, ARROPAR	; SI NO ES ESE # DEL TECLADO, CHECAMOS LOS DEMAS
 	ACALL INCREMENTA_PILA1	
-			
+		
 	JMP FIN_EXT1
 /* ------------------------------------------------------------------------------------- */	
 	ARROPAR:
 	CJNE A, #01H, AMAR		; SI NO ES ESE # DEL TECLADO, CHECAMOS LOS DEMAS
-	ACALL INCREMENTA_PILA2
+	SETB DORMIDO
 			
 	JMP FIN_EXT1
 /* ------------------------------------------------------------------------------------- */	
 	AMAR:
-	CJNE A, #00H, FIN_EXT1				; SI NO ES ESE # DEL TECLADO, CHECAMOS LOS DEMAS
+	CJNE A, #00H, FIN_EXT1	; SI NO ES ESE # DEL TECLADO, CHECAMOS LOS DEMAS
 	ACALL INCREMENTA_PILA3
-							; LO DORMIMOS
+							
 	JMP FIN_EXT1
 /* ------------------------------------------------------------------------------------- */	
 	FIN_EXT1:	
@@ -261,7 +251,7 @@ INIT_DISPLAY:
 	MOV DBUS, #01H
 	ACALL EXECUTE_E
 	
-	MOV DBUS, #0FH
+	MOV DBUS, #0CH
 	ACALL EXECUTE_E	
 	
 	ACALL INIT_ICONOS
@@ -666,6 +656,7 @@ DECREMENTA_PILA1:
 	MOV A, POS_PILA1
 	CJNE A, #BOTTOM_PILA1, INC_POS_PILA1
 	SETB VACIA1
+	SETB MUERTO
 	JMP FIN_DECREMENTA_PILA1
 	
 	INC_POS_PILA1:
@@ -706,6 +697,7 @@ DECREMENTA_PILA2:
 	MOV A, POS_PILA2
 	CJNE A, #BOTTOM_PILA2, INC_POS_PILA2
 	SETB VACIA2
+	SETB MUERTO
 	JMP FIN_DECREMENTA_PILA2
 	
 	INC_POS_PILA2:
@@ -746,6 +738,7 @@ DECREMENTA_PILA3:
 	MOV A, POS_PILA3
 	CJNE A, #BOTTOM_PILA3, INC_POS_PILA3
 	SETB VACIA3
+	SETB MUERTO
 	JMP FIN_DECREMENTA_PILA3
 	
 	INC_POS_PILA3:
@@ -772,23 +765,23 @@ DELAY_50MS:
 	CLR TR0
 	RET
 	
-SUMAR10:
-	MOV A, CUENTA10
+SUMAR40:
+	MOV A, CUENTA40
 	INC A
-	MOV CUENTA10, A
-	RETI
+	MOV CUENTA40, A
+	RET
 	
-SUMAR12:
-	MOV A, CUENTA12
+SUMAR80:
+	MOV A, CUENTA80
 	INC A
-	MOV CUENTA12, A
-	RETI
+	MOV CUENTA80, A
+	RET
 
-SUMAR17:
-	MOV A, CUENTA17
+SUMAR100:
+	MOV A, CUENTA100
 	INC A
-	MOV CUENTA17, A
-	RETI	
+	MOV CUENTA100, A
+	RET
 
 ;*****************************************************************************************
 ;																						 *
@@ -799,7 +792,7 @@ SUMAR17:
 ;*****************************************************************************************
 
 /* ============================== D E S C A N S O ====================================== */
-CHECK_DESCANSO:
+/*CHECK_DESCANSO:
 	MOV AAUX, A
 	MOV A, SUENO
 	CJNE A, #64H, DESCANSAR			; CHECAR SI YA DESCANSO TODO (SUENO = 100)
@@ -819,9 +812,9 @@ CHECK_DESCANSO:
 	
 	FIN_CHK_DESCANSO:
 	MOV A, AAUX
-	RETI
+	RETI*/
 /* ==============================   D O R M I R   ====================================== */
-DORMIR:
+/*DORMIR:
 	MOV AAUX, A
 	
 	SETB DORMIDO			; DORMIR
@@ -831,7 +824,7 @@ DORMIR:
 	MOV CUENTA17, A
 	
 	MOV A, AAUX
-	RETI
+	RETI*/
 
 /* ===============================   D T P T R   ======================================= */
 ORG 1000H
