@@ -74,7 +74,7 @@ BOTTOM_PILA3 EQU 5EH
 /* ===============================    I N I T    ======================================= */
 INIT:
 	MOV IE, #10100111B
-	;MOV IP, #00000010B
+	MOV IP, #00000010B
 	MOV TCON, #00000101B
 	MOV SCON, #01000010B
 	MOV TMOD, #00100010B
@@ -126,7 +126,6 @@ INIT:
 	SETB TR2
 	
 		
-	
 	JMP $
 /* =============================== T I M E R   0 ======================================= */
 TIM0:	
@@ -213,60 +212,32 @@ TIM2:
 	RETI
 /* ===============================    E X T  1   ======================================= */
 EXT1:
-	MOV AAUX, A	
-	 
+	;JB MUERTO, FIN_EXT1
+	MOV AAUX, A		 
 	MOV A, KEY			;TOMA EL NUMERO DEL TECLADO
 /* ------------------------------------------------------------------------------------- */
-	QUIERE_JUGAR:
-	CJNE A, #02H, QUIERE_ALIMENTAR		; SI NO ES ESE # DEL TECLADO, CHECAMOS LOS DEMAS
-	
-	INC_VIDA:
-	MOV A, VIDA
-	CJNE A, #64H, FIN_EXT1				; SI LA VIDA ESTA AL MAXIMO, SALIMOS
-	
-	INC A								; INCREMENTAMOS LA VIDA
-	MOV VIDA, A
-	
-	MOV A, CUENTA5						; INCREMENTAMOS LA CUENTA
-	INC A
-	MOV CUENTA5, A
-	
-	CJNE A, #05H, INC_VIDA				; SI NO HEMOS LLEGADO A 5, VOLVEMOS A SUMAR
-	
+	ALIMENTAR:
+	CJNE A, #02H, ARROPAR	; SI NO ES ESE # DEL TECLADO, CHECAMOS LOS DEMAS
+	ACALL INCREMENTA_PILA1	
+			
 	JMP FIN_EXT1
 /* ------------------------------------------------------------------------------------- */	
-	QUIERE_ALIMENTAR:
-	CJNE A, #01H, QUIERE_ARROPAR		; SI NO ES ESE # DEL TECLADO, CHECAMOS LOS DEMAS
-	
-	INC_COMIDA:
-	MOV A, COMIDA
-	CJNE A, #64H, FIN_EXT1				; SI LA COMIDA ESTA AL MAXIMO, SALIMOS
-	
-	INC A								; INCREMENTAMOS LA COMIDA
-	MOV COMIDA, A
-	
-	MOV A, CUENTA5						; INCREMENTAMOS LA CUENTA
-	INC A
-	MOV CUENTA5, A
-	
-	CJNE A, #05H, INC_COMIDA			; SI NO HEMOS LLEGADO A 5, VOLVEMOS A SUMAR
-	
+	ARROPAR:
+	CJNE A, #01H, AMAR		; SI NO ES ESE # DEL TECLADO, CHECAMOS LOS DEMAS
+	ACALL INCREMENTA_PILA2
+			
 	JMP FIN_EXT1
 /* ------------------------------------------------------------------------------------- */	
-	QUIERE_ARROPAR:
+	AMAR:
 	CJNE A, #00H, FIN_EXT1				; SI NO ES ESE # DEL TECLADO, CHECAMOS LOS DEMAS
-	
-	MOV A, SUENO
-	CJNE A, #64H, FIN_EXT1				; SI EL SUENO ESTA AL MAXIMO, SALIMOS
-	
-	ACALL DORMIR						; LO DORMIMOS
+	ACALL INCREMENTA_PILA3
+							; LO DORMIMOS
 	JMP FIN_EXT1
 /* ------------------------------------------------------------------------------------- */	
-	FIN_EXT1:
-	MOV A, #00H							; RESETEAMOS CUENTA5
-	MOV CUENTA5, A
+	FIN_EXT1:	
 	MOV A, AAUX
 	RETI
+	
 /* ===============================    E X T  0   ======================================= */	 
 EXT0:	
 	
